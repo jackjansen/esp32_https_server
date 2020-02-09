@@ -132,8 +132,12 @@ void handleRoot(HTTPRequest * req, HTTPResponse * res) {
 	// Disadvantages:
 	// - May be hard to read for humans
 	// - Cannot be used for inputs with type=file (you will only get the filename, not the content)
-	res->println("<form method=\"POST\" action=\"/\" enctype=\"x-www-form-urlencoded\">");
 	res->println("<h2>enctype=x-www-form-urlencoded</h2>");
+	res->println("<form method=\"POST\" action=\"/\" enctype=\"x-www-form-urlencoded\">");
+	res->println("Line: <input name=\"line\"><br>");
+	res->println("Multiline: <textarea name=\"multiline\" lines=\"4\" cols=\"40\"></textarea><br>");
+	res->println("file: <input type=\"file\" name=\"file\"><br>");
+	res->println("<input type=\"submit\" value=\"Submit\">");
 	res->println("</form>");
 
 	// enctype=multipart/form-data
@@ -145,8 +149,12 @@ void handleRoot(HTTPRequest * req, HTTPResponse * res) {
 	// - Can be used for files and binary data
 	// Disadvantages:
 	// - Big overhead if used for some small string values
-	res->println("<form method=\"POST\" action=\"/\" enctype=\"multipart/form-data\">");
 	res->println("<h2>enctype=multipart/form-data</h2>");
+	res->println("<form method=\"POST\" action=\"/\" enctype=\"xmultipart/form-data\">");
+	res->println("Line: <input name=\"line\"><br>");
+	res->println("Multiline: <textarea name=\"multiline\" lines=\"4\" cols=\"40\"></textarea><br>");
+	res->println("file: <input type=\"file\" name=\"file\"><br>");
+	res->println("<input type=\"submit\" value=\"Submit\">");
 	res->println("</form>");
 
 	res->println("</body>");
