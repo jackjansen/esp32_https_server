@@ -134,7 +134,7 @@ void handleRoot(HTTPRequest * req, HTTPResponse * res) {
 	// - Cannot be used for inputs with type=file (you will only get the filename, not the content)
 	res->println("<form method=\"POST\" action=\"/\" enctype=\"x-www-form-urlencoded\">");
 	res->println("<h2>enctype=x-www-form-urlencoded</h2>");
-	res->println("</form>")
+	res->println("</form>");
 
 	// enctype=multipart/form-data
 	//
@@ -147,7 +147,7 @@ void handleRoot(HTTPRequest * req, HTTPResponse * res) {
 	// - Big overhead if used for some small string values
 	res->println("<form method=\"POST\" action=\"/\" enctype=\"multipart/form-data\">");
 	res->println("<h2>enctype=multipart/form-data</h2>");
-	res->println("</form>")
+	res->println("</form>");
 
 	res->println("</body>");
 	res->println("</html>");
