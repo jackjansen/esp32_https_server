@@ -32,6 +32,9 @@
 #include <SSLCert.hpp>
 #include <HTTPRequest.hpp>
 #include <HTTPResponse.hpp>
+#include <HTTPBodyParser.hpp>
+#include <HTTPMultipartBodyParser.hpp>
+#include <HTTPURLEncodedBodyParser.hpp>
 
 // The HTTPS Server comes in a separate namespace. For easier use, include it here.
 using namespace httpsserver;
@@ -165,6 +168,17 @@ void handleForm(HTTPRequest * req, HTTPResponse * res) {
 	// First, we need to check the encoding of the form that we have received.
 	// The browser will set the Content-Type request header, so we can use it for that purpose.
 	// Then we select the body parser based on the encoding.
+	HTTPBodyParser *parser;
+	std::string contentType = req->getHeader("Content-Type");
+	Serial.printf("xxxjack Content-Type=%s\n", contentType.c_str());
+	if (contentType == "x-www-form-urlencoded") {
+		parser = new HTTPURLEncodedBodyParser(req);
+	} else if (contentType == "multipart/form-data") {
+		parser = new HTTPMultipartBodyParser(req);
+	} else {
+		Serial.printf("Unknown POST Content-Type: %s\n", contentType.c_str());
+		return;
+	}
 	// Note: This is only necessary if you expect various enctypes to be send to the same handler.
 	// If you would have only one form on your page with a fixed enctype, just instantiate the
 	// corresponding reader.
@@ -183,6 +197,7 @@ void handleForm(HTTPRequest * req, HTTPResponse * res) {
 	// data structure by yourself and make sure that all fits into the memory.
 
 	// TODO: Iterate over fields
+	delete parser;
 }
 
 void handle404(HTTPRequest * req, HTTPResponse * res) {
