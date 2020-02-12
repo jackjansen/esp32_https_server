@@ -153,7 +153,7 @@ void handleRoot(HTTPRequest * req, HTTPResponse * res) {
 	// Disadvantages:
 	// - Big overhead if used for some small string values
 	res->println("<h2>enctype=multipart/form-data</h2>");
-	res->println("<form method=\"POST\" action=\"/\" enctype=\"xmultipart/form-data\">");
+	res->println("<form method=\"POST\" action=\"/\" enctype=\"multipart/form-data\">");
 	res->println("Line: <input name=\"line\"><br>");
 	res->println("Multiline: <textarea name=\"multiline\" lines=\"4\" cols=\"40\"></textarea><br>");
 	res->println("file: <input type=\"file\" name=\"file\"><br>");
@@ -171,7 +171,7 @@ void handleForm(HTTPRequest * req, HTTPResponse * res) {
 	HTTPBodyParser *parser;
 	std::string contentType = req->getHeader("Content-Type");
 	Serial.printf("xxxjack Content-Type=%s\n", contentType.c_str());
-	if (contentType == "x-www-form-urlencoded") {
+	if (contentType == "application/x-www-form-urlencoded") {
 		parser = new HTTPURLEncodedBodyParser(req);
 	} else if (contentType == "multipart/form-data") {
 		parser = new HTTPMultipartBodyParser(req);
