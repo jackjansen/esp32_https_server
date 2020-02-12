@@ -20,6 +20,7 @@ namespace httpsserver {
 class HTTPBodyParser {
 public:
   HTTPBodyParser(HTTPRequest * req): _request(req) {};
+  virtual ~HTTPBodyParser() {}
 
   /**
    * Proceeds to the next field of the body

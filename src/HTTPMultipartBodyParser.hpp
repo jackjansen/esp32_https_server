@@ -9,6 +9,7 @@ namespace httpsserver {
 class HTTPMultipartBodyParser : public HTTPBodyParser {
 public:
   // From HTTPBodyParser
+  using HTTPBodyParser::HTTPBodyParser;
   virtual bool nextField();
   virtual std::string getFieldName();
   virtual std::string getFieldMimeType();
