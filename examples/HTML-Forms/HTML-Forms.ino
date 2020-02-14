@@ -197,6 +197,16 @@ void handleForm(HTTPRequest * req, HTTPResponse * res) {
 	// data structure by yourself and make sure that all fits into the memory.
 
 	// TODO: Iterate over fields
+	while(parser->nextField()) {
+		std::string name = parser->getFieldName();
+		std::string mimeType = parser->getFieldMimeType();
+		size_t length = parser->getLength();
+		Serial.printf("xxxjack field name='%s', mimetype='%s', length=%d\n", name.c_str(), mimeType.c_str(), int(length));
+		char *buf = new char[length+1];
+		size_t readLength = parser->read((byte *)buf, length);
+		Serial.printf("xxxjack field read %d bytes, data: \"%s\"\n", int(readLength), buf);
+		delete[] buf;
+	}
 	delete parser;
 }
 
