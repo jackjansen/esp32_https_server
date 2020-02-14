@@ -170,6 +170,8 @@ void handleForm(HTTPRequest * req, HTTPResponse * res) {
 	// Then we select the body parser based on the encoding.
 	HTTPBodyParser *parser;
 	std::string contentType = req->getHeader("Content-Type");
+	size_t semicolonPos = contentType.find(";");
+	if (semicolonPos != std::string::npos) contentType = contentType.substr(0, semicolonPos);
 	Serial.printf("xxxjack Content-Type=%s\n", contentType.c_str());
 	if (contentType == "application/x-www-form-urlencoded") {
 		parser = new HTTPURLEncodedBodyParser(req);
@@ -204,6 +206,7 @@ void handleForm(HTTPRequest * req, HTTPResponse * res) {
 		Serial.printf("xxxjack field name='%s', mimetype='%s', length=%d\n", name.c_str(), mimeType.c_str(), int(length));
 		char *buf = new char[length+1];
 		size_t readLength = parser->read((byte *)buf, length);
+		buf[length] = 0;
 		Serial.printf("xxxjack field read %d bytes, data: \"%s\"\n", int(readLength), buf);
 		delete[] buf;
 	}
