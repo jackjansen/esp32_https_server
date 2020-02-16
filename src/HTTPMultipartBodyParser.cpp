@@ -1,6 +1,8 @@
 #include "HTTPMultipartBodyParser.hpp"
 #include <sstream>
 
+#define MAXLINESIZE 256
+
 namespace httpsserver {
 
 // #define DEBUG_MULTIPART_PARSER
@@ -201,7 +203,7 @@ HTTPMultipartBodyParser::HTTPMultipartBodyParser(HTTPRequest * req)
     return; //TODO: error 500, RFC violation
   }
   lastBoundary = boundary + "--";
-#if 1
+#if 0
   auto bodyLength = _request->getContentLength();
   Serial.printf("xxxjack body len=%d\n", int(bodyLength));
   if (bodyLength) {
@@ -217,16 +219,107 @@ HTTPMultipartBodyParser::~HTTPMultipartBodyParser() {
 
 }
 
+std::string HTTPMultipartBodyParser::readLine() {
+  char buffer[MAXLINESIZE+1];
+  char *bufPtr = buffer;
+  while(bufPtr < buffer+MAXLINESIZE) {
+    char c;
+    size_t didRead = _request->readChars(&c, 1);
+    if (didRead != 1) {
+      HTTPS_LOGE("Incomplete multipart");
+      break;
+    }
+    if (c == '\r') {
+      _request->readChars(&c, 1);
+      if (c != '\n') {
+        HTTPS_LOGE("Bad multipart end-of-line");
+      }
+      break;
+    }
+    *bufPtr++ = c;
+  }
+  if (bufPtr == buffer+MAXLINESIZE) {
+    HTTPS_LOGE("Multipart line too long");
+  }
+  *bufPtr = '\0';
+  Serial.printf("xxxjack readline: %s\n", buffer);
+  return std::string(buffer);
+}
+
 bool HTTPMultipartBodyParser::nextField() {
-  return false;
+  if (_request->requestComplete()) return false;
+  std::string line = readLine();
+  // xxxjack temp
+  while (line != "" && line != boundary && line != lastBoundary) {
+    Serial.println("xxxjack Skipping multipart line");
+    line = readLine();
+  }
+  if (line == lastBoundary) {
+    _request->discardRequestBody();
+    return false;
+  }
+  if (line != boundary) {
+    HTTPS_LOGE("Multipart missing boundary");
+    return false;
+  }
+  // Read header lines up to and including blank line
+  fieldName = "";
+  fieldMimeType = "text/plain";
+  fieldFilename = "";
+  while (true) {
+    line = readLine();
+    if (line == "") break;
+    if (line.substr(0, 14) == "Content-Type: ") {
+      fieldMimeType = line.substr(14);
+    }
+    if (line.substr(0, 31) == "Content-Disposition: form-data;") {
+      // Parse name=value; or name="value"; fields.
+      std::string field;
+      line = line.substr(31);
+      while(true) {
+        size_t pos = line.find_first_not_of(' ');
+        if (pos != std::string::npos) {
+          line = line.substr(pos);
+        }
+        if (line == "") break;
+        pos = line.find(';');
+        if (pos == std::string::npos) {
+          field = line;
+          line = "";
+        } else {
+          field = line.substr(0, pos);
+          line = line.substr(pos+1);
+        }
+        pos = field.find('=');
+        if (pos == std::string::npos) {
+          HTTPS_LOGE("Multipart ill-formed form-data header");
+          continue;
+        }
+        std::string headerName = field.substr(0, pos);
+        std::string headerValue = field.substr(pos+1);
+        if (headerValue.substr(0,1) == "\"") headerValue = headerValue.substr(1, headerValue.size()-2);
+        if (headerName == "name") {
+          fieldName = headerValue;
+        }
+        if (headerName == "filename") {
+          fieldFilename = headerValue;
+        }
+      }
+    }
+  }
+  if (fieldName == "") {
+    HTTPS_LOGE("Multipart missing name");
+    return false;
+  }
+  return true;
 }
 
 std::string HTTPMultipartBodyParser::getFieldName() {
-  return std::string("foo");
+  return fieldName;
 }
 
 std::string HTTPMultipartBodyParser::getFieldMimeType() {
-  return std::string("text/plain");
+  return fieldMimeType;
 }
 
 size_t HTTPMultipartBodyParser::getLength() {

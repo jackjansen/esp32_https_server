@@ -19,8 +19,13 @@ public:
 private:
   void temp();
   void handleField(std::string, std::string);
+  std::string readLine();
+
   std::string boundary;
   std::string lastBoundary;
+  std::string fieldName;
+  std::string fieldMimeType;
+  std::string fieldFilename;
 };
 
 } // namespace httpserver
