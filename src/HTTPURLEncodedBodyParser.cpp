@@ -11,13 +11,11 @@ HTTPURLEncodedBodyParser::HTTPURLEncodedBodyParser(HTTPRequest * req)
   fieldRemainingLength(0)
 {
   bodyLength = _request->getContentLength();
-  Serial.printf("xxxjack body len=%d\n", int(bodyLength));
   if (bodyLength) {
     bodyBuffer = new char[bodyLength+1];
     _request->readChars(bodyBuffer, bodyLength);
     bodyPtr = bodyBuffer;
     bodyBuffer[bodyLength] = '\0';
-    Serial.printf(" xxxjack body: \"%s\".\n", bodyBuffer);
   }
 }
 
@@ -54,16 +52,16 @@ std::string HTTPURLEncodedBodyParser::getFieldName() {
   return fieldName;
 }
 
+std::string HTTPURLEncodedBodyParser::getFieldFilename() {
+  return "";
+}
+
 std::string HTTPURLEncodedBodyParser::getFieldMimeType() {
   return std::string("text/plain");
 }
 
-size_t HTTPURLEncodedBodyParser::getLength() {
-  return fieldBuffer.size();
-}
-
-size_t HTTPURLEncodedBodyParser::getRemainingLength() {
-  return fieldRemainingLength;
+bool HTTPURLEncodedBodyParser::endOfField() {
+  return fieldRemainingLength <= 0;
 }
 
 size_t HTTPURLEncodedBodyParser::read(byte* buffer, size_t bufferSize) {

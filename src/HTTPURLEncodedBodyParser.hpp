@@ -13,9 +13,9 @@ public:
   ~HTTPURLEncodedBodyParser();
   virtual bool nextField();
   virtual std::string getFieldName();
+  virtual std::string getFieldFilename();
   virtual std::string getFieldMimeType();
-  virtual size_t getLength();
-  virtual size_t getRemainingLength();
+  virtual bool endOfField();
   virtual size_t read(byte* buffer, size_t bufferSize);
 protected:
   char *bodyBuffer;

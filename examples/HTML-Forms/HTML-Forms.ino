@@ -172,7 +172,7 @@ void handleForm(HTTPRequest * req, HTTPResponse * res) {
 	std::string contentType = req->getHeader("Content-Type");
 	size_t semicolonPos = contentType.find(";");
 	if (semicolonPos != std::string::npos) contentType = contentType.substr(0, semicolonPos);
-	Serial.printf("xxxjack Content-Type=%s\n", contentType.c_str());
+	Serial.printf("handleForm: Content-Type=%s\n", contentType.c_str());
 	if (contentType == "application/x-www-form-urlencoded") {
 		parser = new HTTPURLEncodedBodyParser(req);
 	} else if (contentType == "multipart/form-data") {
@@ -201,14 +201,21 @@ void handleForm(HTTPRequest * req, HTTPResponse * res) {
 	// TODO: Iterate over fields
 	while(parser->nextField()) {
 		std::string name = parser->getFieldName();
+		std::string filename = parser->getFieldFilename();
 		std::string mimeType = parser->getFieldMimeType();
-		size_t length = parser->getLength();
-		Serial.printf("xxxjack field name='%s', mimetype='%s', length=%d\n", name.c_str(), mimeType.c_str(), int(length));
-		char *buf = new char[length+1];
-		size_t readLength = parser->read((byte *)buf, length);
-		buf[length] = 0;
-		Serial.printf("xxxjack field read %d bytes, data: \"%s\"\n", int(readLength), buf);
-		delete[] buf;
+		Serial.printf("handleForm: field name='%s', filename='%s', mimetype='%s'\n", name.c_str(), filename.c_str(), mimeType.c_str());
+		if (mimeType == "text/plain") Serial.printf("handleForm: content:\n");
+		size_t fieldLength = 0;
+		while (!parser->endOfField()) {
+			char buf[513];
+			size_t readLength = parser->read((byte *)buf, 512);
+			fieldLength += readLength;
+			if (mimeType == "text/plain") {
+				buf[readLength] = '\0';
+				Serial.print(buf);
+			}
+		}
+		Serial.printf("\nhandleForm: field contained %d bytes\n", int(fieldLength));
 	}
 	delete parser;
 }
