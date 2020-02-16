@@ -20,6 +20,13 @@ private:
   void temp();
   void handleField(std::string, std::string);
   std::string readLine();
+  void fillBufferUptoCR(size_t maxLen);
+  void consumedBuffer(size_t consumed);
+  bool skipCRLF();
+  bool peekBoundary();
+  char *buffer;
+  size_t bufferSize;
+  bool didReadCR;
 
   std::string boundary;
   std::string lastBoundary;

@@ -180,8 +180,13 @@ void HTTPMultipartBodyParser::temp() {
 
 HTTPMultipartBodyParser::HTTPMultipartBodyParser(HTTPRequest * req)
 : HTTPBodyParser(req),
+  peekBuffer(NULL),
+  peekBufferSize(0),
   boundary(""),
-  lastBoundary("")
+  lastBoundary(""),
+  fieldName(""),
+  fieldMimeType(""),
+  fieldFilename("")
 {
   auto contentType = _request->getHeader("Content-Type");
 #ifdef DEBUG_MULTIPART_PARSER      
@@ -203,57 +208,95 @@ HTTPMultipartBodyParser::HTTPMultipartBodyParser(HTTPRequest * req)
     return; //TODO: error 500, RFC violation
   }
   lastBoundary = boundary + "--";
-#if 0
-  auto bodyLength = _request->getContentLength();
-  Serial.printf("xxxjack body len=%d\n", int(bodyLength));
-  if (bodyLength) {
-    auto bodyBuffer = new char[bodyLength+1];
-    _request->readChars(bodyBuffer, bodyLength);
-    bodyBuffer[bodyLength] = '\0';
-    Serial.printf(" xxxjack body: \"%s\".\n", bodyBuffer);
-  }
-#endif
 }
 
 HTTPMultipartBodyParser::~HTTPMultipartBodyParser() {
-
+  if (peekBuffer) {
+    free(peekBuffer);
+    peekBuffer = NULL;
+  }
 }
 
-std::string HTTPMultipartBodyParser::readLine() {
-  char buffer[MAXLINESIZE+1];
-  char *bufPtr = buffer;
-  while(bufPtr < buffer+MAXLINESIZE) {
+void HTTPMultipartBodyParser::fillBufferUptoCR(size_t maxLen) {
+  char *bufPtr;
+  if (peekBuffer == NULL) {
+    // Nothing in the buffer. Allocate one of the wanted size
+    peekBuffer = (char *)malloc(maxLen);
+    bufPtr = peekBuffer;
+    peekBufferSize = 0;
+  } else if (peekBufferSize < maxLen) {
+    // Something in the buffer, but not enough
+    peekBuffer = (char *)realloc(peekBuffer, maxLen);
+    bufPtr = peekBuffer + peekBufferSize;
+  } else {
+    // We already have enough data in the buffer.
+    return;
+  }
+  didReadCR = false;
+  while(bufPtr < peekBuffer+maxLen) {
     char c;
     size_t didRead = _request->readChars(&c, 1);
     if (didRead != 1) {
-      HTTPS_LOGE("Incomplete multipart");
-      break;
-    }
-    if (c == '\r') {
-      _request->readChars(&c, 1);
-      if (c != '\n') {
-        HTTPS_LOGE("Bad multipart end-of-line");
-      }
+      HTTPS_LOGE("Multipart incomplete");
       break;
     }
     *bufPtr++ = c;
+    if (c == '\r') {
+      didReadCR = true;
+      break;
+    }
   }
-  if (bufPtr == buffer+MAXLINESIZE) {
+  peekBufferSize = bufPtr - peekBuffer;
+}
+
+void HTTPMultipartBodyParser::consumedBuffer(size_t consumed) {
+  if (consumed == 0) consumed = peekBufferSize;
+  if (consumed == peekBufferSize) {
+    free(peekBuffer);
+    peekBuffer = NULL;
+    peekBufferSize = 0;
+  } else {
+    memmove(peekBuffer, peekBuffer+consumed, peekBufferSize-consumed);
+    peekBufferSize -= consumed;
+  }
+}
+
+bool HTTPMultipartBodyParser::skipCRLF() {
+  char c;
+  if (_request->readChars(&c, 1) != 1 || c != '\n' || !didReadCR) {
+    HTTPS_LOGE("Multipart incorrect line terminator");
+    _request->discardRequestBody();
+    return false;
+  }
+  return true;
+}
+
+std::string HTTPMultipartBodyParser::readLine() {
+  fillBufferUptoCR(MAXLINESIZE);
+  if (!didReadCR) {
     HTTPS_LOGE("Multipart line too long");
   }
-  *bufPtr = '\0';
-  Serial.printf("xxxjack readline: %s\n", buffer);
-  return std::string(buffer);
+  skipCRLF();
+  std::string rv(peekBuffer, peekBufferSize-1);
+  consumedBuffer(0);
+  Serial.printf("xxxjack readline returning %s\n", rv.c_str());
+  return rv;
+}
+
+// Returns true if the buffer contains a boundary (or possibly lastBoundary)
+bool HTTPMultipartBodyParser::peekBoundary() {
+  if (peekBuffer == NULL || peekBufferSize < boundary.size()) return false;
+  char *ptr = peekBuffer;
+  if (*ptr == '\n') ptr++;
+  return memcmp(ptr, boundary.c_str(), boundary.size()) == 0;
 }
 
 bool HTTPMultipartBodyParser::nextField() {
-  if (_request->requestComplete()) return false;
-  std::string line = readLine();
-  // xxxjack temp
-  while (line != "" && line != boundary && line != lastBoundary) {
-    Serial.println("xxxjack Skipping multipart line");
-    line = readLine();
+  while(!peekBoundary()) {
+    readLine();
+    if (_request->requestComplete()) return false;
   }
+  std::string line = readLine();
   if (line == lastBoundary) {
     _request->discardRequestBody();
     return false;
@@ -323,15 +366,28 @@ std::string HTTPMultipartBodyParser::getFieldMimeType() {
 }
 
 size_t HTTPMultipartBodyParser::getLength() {
-  return 0;
+  return unknownLength;
 }
 
 size_t HTTPMultipartBodyParser::getRemainingLength() {
-  return 0;
+  return peekBoundary() ? 0 : unknownLength;
 }
 
 size_t HTTPMultipartBodyParser::read(byte* buffer, size_t bufferSize) {
-  return 0;
+  if (peekBoundary()) return 0;
+  size_t readSize = std::max(bufferSize, MAXLINESIZE);
+  fillBufferUptoCR(readSize);
+  if (peekBoundary()) return 0;
+  size_t copySize = std::min(bufferSize, peekBufferSize);
+  memcpy(buffer, peekBuffer, copySize);
+  consumedBuffer(copySize);
+  // Note that we may have copied the CR that is really part of the CR LF boundary CR LF sequence.
+  // Test for that.
+  fillBufferUptoCR(MAXLINESIZE);
+  if (peekBoundary()) {
+    copySize--;
+  }
+  return copySize;
 }
 
 
