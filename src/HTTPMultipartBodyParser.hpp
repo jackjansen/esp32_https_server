@@ -18,13 +18,14 @@ public:
   virtual size_t read(byte* buffer, size_t bufferSize);
 private:
   std::string readLine();
-  void fillBufferUptoCR(size_t maxLen);
+  void fillBuffer(size_t maxLen);
   void consumedBuffer(size_t consumed);
   bool skipCRLF();
   bool peekBoundary();
+  void discardBody();
+  bool endOfBody();
   char *peekBuffer;
   size_t peekBufferSize;
-  bool didReadCR;
 
   std::string boundary;
   std::string lastBoundary;
