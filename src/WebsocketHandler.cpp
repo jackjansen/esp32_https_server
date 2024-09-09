@@ -117,7 +117,7 @@ int WebsocketHandler::read() {
   if (payloadLen == 0) {
     HTTPS_LOGW("WS payload not present");
   } else {
-    HTTPS_LOGI("WS payload: length=%d", payloadLen);
+    HTTPS_LOGI("WS payload: length=%lu", payloadLen);
   }
 
   switch(frame.opCode) {
