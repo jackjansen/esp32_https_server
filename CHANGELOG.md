@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.0.0](https://github.com/jackjansen/esp32_idf5_https_server/tree/master)
+
+– For self-signed certificates generated on the ESP32, the CN is now added as subjectAltName
+
+Breaking changes:
+
+– Generating self-signed certificates requires now a `CN=` as part of the distinguished name of the subject
+
 ## [v1.1.1](https://github.com/jackjansen/esp32_idf5_https_server/tree/master)
 
 - Addressed issues with esp32-arduino-core v3 and esp-idf 5.0
